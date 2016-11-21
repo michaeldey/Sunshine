@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.text.format.Time;
 import android.util.Log;
@@ -29,8 +30,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 //import android.text.format.Time;
 
@@ -66,15 +65,20 @@ public class ForecastFragment extends Fragment {
     //handle action bar item clicks
     @Override
     public boolean onOptionsItemSelected(MenuItem item){
-
+        //action bar clicks are handled here
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
 
-            //create a FetchWeather task and execute it
-            //this runs the code we copied from the website app
-            FetchWeatherTask weatherTask = new FetchWeatherTask();
-            weatherTask.execute("84123");
+//            //create a FetchWeather task and execute it
+//            //this runs the code we copied from the website app
+//            FetchWeatherTask weatherTask = new FetchWeatherTask();
+//            SharedPreferences prefs = PreferenceManager
+//                    .getDefaultSharedPreferences(getActivity());
+//            String location = prefs.getString(getString(R.string.pref_location_key),
+//                    getString(R.string.pref_location_default));
+//            weatherTask.execute(location);
 
+            updateWeather();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -86,18 +90,18 @@ public class ForecastFragment extends Fragment {
                              Bundle savedInstanceState) {
 
         //create dummy data for the ListView
-        String[] data = {
-                "Mon 6/23 - Sunny - 31/17",
-                "Tue 6/24 - Foggy -21/8",
-                "Wed 6/25 - Cloudy - 22/17",
-                "Thurs 6/26 - Rainy - 18/11",
-                "Fri 6/27 - Foggy - 21/10",
-                "Sat 6/28 - TRAPPED IN WEATHERSTATION - 23/18",
-                "Sun 6/29 - Sunny - 20/7"
-        };
+//        String[] data = {
+//                "Mon 6/23 - Sunny - 31/17",
+//                "Tue 6/24 - Foggy -21/8",
+//                "Wed 6/25 - Cloudy - 22/17",
+//                "Thurs 6/26 - Rainy - 18/11",
+//                "Fri 6/27 - Foggy - 21/10",
+//                "Sat 6/28 - TRAPPED IN WEATHERSTATION - 23/18",
+//                "Sun 6/29 - Sunny - 20/7"
+//        };
 
         //put dummy data into a List<String>
-        List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
+        //List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
 
         //load the adapter
         mForecastAdapter =
@@ -105,7 +109,7 @@ public class ForecastFragment extends Fragment {
                         getActivity(), //the current context (this activity)
                         R.layout.list_item_forecast, //the name of the layout ID
                         R.id.list_item_forecast_textview, //the ID of the textView to populate
-                        weekForecast
+                        new ArrayList<String>()
                 );
 
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
@@ -142,6 +146,22 @@ public class ForecastFragment extends Fragment {
 
     }//End of onCreateView
 
+    private void updateWeather(){
+        System.out.println("********* updateWeather is running *****");
+        FetchWeatherTask weatherTask = new FetchWeatherTask();
+        String location = PreferenceManager.getDefaultSharedPreferences(getActivity())
+                .getString(getString(R.string.pref_location_key),
+                        getString(R.string.pref_location_default));
+        System.out.println("Location: " + location);
+        weatherTask.execute(location);
+    }
+
+    @Override
+    public void onStart(){
+        super.onStart();
+        updateWeather();
+    }
+
     public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
 
@@ -151,6 +171,7 @@ public class ForecastFragment extends Fragment {
 
             //if there is no zip code, there's nothing to look up
             if (params.length == 0){
+                System.out.println("There is no zipcode");
                 return null;
             }
 
@@ -168,12 +189,16 @@ public class ForecastFragment extends Fragment {
             String format = "json";
             String units = "metric";
             int numDays = 7;
+            String Country="us";//ADD country param
 
+            System.out.println("****Right before the try");
             try {
+                System.out.println("try statement is running");
                 // Construct the URL for the OpenWeatherMap query
                 // Construct variables to build uri
                 final String FORECAST_BASE_URL = "http://api.openweathermap.org/data/2.5/forecast/daily?";
-                final String QUERY_PARAM = "q";
+                final String QUERY_PARAM = "zip";
+                final String COUNTRY_PARAM = "country"; //add country param
                 final String FORMAT_PARAM = "mode";
                 final String UNITS_PARAM = "units";
                 final String DAYS_PARAM = "cnt";
@@ -182,6 +207,7 @@ public class ForecastFragment extends Fragment {
                 //build the URI object
                 Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
                         .appendQueryParameter(QUERY_PARAM, params[0])
+                        .appendQueryParameter(COUNTRY_PARAM, Country)
                         .appendQueryParameter(FORMAT_PARAM, format)
                         .appendQueryParameter(UNITS_PARAM, units)
                         .appendQueryParameter(DAYS_PARAM, Integer.toString(numDays))
@@ -192,7 +218,7 @@ public class ForecastFragment extends Fragment {
                 URL url = new URL(builtUri.toString());
 
                 Log.v(LOG_TAG, "Built URI " + builtUri.toString());
-                //System.out.println("*************** URL : " + url);
+                System.out.println("*************** URL : " + url);
 
                 // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
@@ -203,6 +229,7 @@ public class ForecastFragment extends Fragment {
                 InputStream inputStream = urlConnection.getInputStream();
                 StringBuffer buffer = new StringBuffer();
                 if (inputStream == null) {
+                    System.out.println("inputStream is null");
                     // input string didn't get any information, so there's nothing to do
                     return null;
                 }
@@ -210,12 +237,12 @@ public class ForecastFragment extends Fragment {
 
                 String line;
 
-
+                System.out.println("Before While statement");
                 while ((line = reader.readLine()) != null) {
                     // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
                     // But it does make debugging a *lot* easier if you print out the completed
                     // buffer for debugging.
-                    System.out.println(line);//print each line to the System monitor
+                    System.out.println("LINE: " + line);//print each line to the System monitor
 
                     buffer.append(line + "\n");
                 }
@@ -266,7 +293,7 @@ public class ForecastFragment extends Fragment {
         private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays)
             throws JSONException {
 
-            //System.out.println("************** getWeatherDataFromJson has been called");
+            System.out.println("************** getWeatherDataFromJson has been called");
 
                 //These are the names of the JSON objects that need to be extracted
             final String OWM_LIST = "list";
