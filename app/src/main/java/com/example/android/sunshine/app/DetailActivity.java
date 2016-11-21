@@ -1,7 +1,7 @@
 package com.example.android.sunshine.app;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
@@ -9,6 +9,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 /**
  * Created by micha on 11/20/2016.
@@ -30,7 +31,7 @@ public class DetailActivity extends ActionBarActivity{
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // inflate the menu; this adds items to the action bar if it is present
-        // getMenuInflater().inflate(R.menu.detail, menu); //save for later?
+        //getMenuInflater().inflate(R.id.detail, menu); //save for later?
         return true;
     }//end of onCreateOptionsMenu
 
@@ -42,7 +43,8 @@ public class DetailActivity extends ActionBarActivity{
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id = R.id.action_settings){
+        if (id == R.id.action_settings){
+            startActivity(new Intent(this, SettingsActivity.class));
             return true;
         }
 
@@ -57,9 +59,20 @@ public class DetailActivity extends ActionBarActivity{
         }
 
         @Override
-        public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+
+            // the detail activity called via intent
+            Intent intent = getActivity().getIntent();
+
             View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+
+            if (intent != null && intent.hasExtra(Intent.EXTRA_TEXT)) {
+                String forecastStr = intent.getStringExtra(Intent.EXTRA_TEXT);
+                ((TextView) rootView.findViewById(R.id.detail_text)).setText(forecastStr);
+
+            }
+
             return rootView;
-        }
-    }
+        }//end of onCreateView
+    }//end of PlaceholderFragment
 }

@@ -1,9 +1,11 @@
 package com.example.android.sunshine.app;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.text.format.Time;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -14,7 +16,10 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,9 +27,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+//import android.text.format.Time;
+
+//import android.text.format.Time;
 
 /**
  * Encapsulates fetching the forecast and displaying it as a ListView layout
@@ -104,16 +114,29 @@ public class ForecastFragment extends Fragment {
         ListView listView = (ListView) rootView.findViewById(R.id.listview_forcast);
         listView.setAdapter(mForecastAdapter);
 
+
+
+        //add listener and toast
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             //get and show toast item which should be forecast
+            //take a generic view from whatever view that was clicked
+            // position is the position of the view that was clicked
+            // l is the row id of item
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long l){
-                String forecast = mForecastAdapter.getItem(position);//get forecast string
-                Toast.makeText(getActivity(), forecast, Toast.LENGTH_SHORT).show(); //display the toast
+                //take the mForecaster item at the given position
+                String forecast = mForecastAdapter.getItem(position);
 
+                Intent intent = new Intent(getActivity(), DetailActivity.class)
+                        .putExtra(Intent.EXTRA_TEXT, forecast);
+                startActivity(intent);
 
+//                //creates the toast
+//                Toast.makeText(getActivity(), forecast, Toast.LENGTH_SHORT).show();
             }
         });
+
+
 
         return rootView;
 
@@ -125,6 +148,11 @@ public class ForecastFragment extends Fragment {
         @Override
         protected String[] doInBackground(String... params) {
             Log.w(LOG_TAG, "doInBackground ");
+
+            //if there is no zip code, there's nothing to look up
+            if (params.length == 0){
+                return null;
+            }
 
             //***************************text from cloud <code></code>
 
@@ -164,6 +192,7 @@ public class ForecastFragment extends Fragment {
                 URL url = new URL(builtUri.toString());
 
                 Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+                //System.out.println("*************** URL : " + url);
 
                 // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
@@ -180,11 +209,14 @@ public class ForecastFragment extends Fragment {
                 reader = new BufferedReader(new InputStreamReader(inputStream));
 
                 String line;
+
+
                 while ((line = reader.readLine()) != null) {
                     // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
                     // But it does make debugging a *lot* easier if you print out the completed
                     // buffer for debugging.
                     System.out.println(line);//print each line to the System monitor
+
                     buffer.append(line + "\n");
                 }
 
@@ -193,10 +225,12 @@ public class ForecastFragment extends Fragment {
                     return null;
                 }
                 forecastJsonStr = buffer.toString();
+                //System.out.println("*************** forecastJsonStr:\n " + forecastJsonStr);
             } catch (IOException e) {
                 Log.e("ForecastFragment", "Error ", e);
                 // If the code didn't successfully get the weather data, there's no point in attemping
                 // to parse it.
+                //System.out.println("There was a problem getting the weather data**********************");
                 return null;
             } finally {
                 if (urlConnection != null) {
@@ -211,10 +245,126 @@ public class ForecastFragment extends Fragment {
                 }
             }
 
+            //process JSON and return string
+            try {
+                return getWeatherDataFromJson(forecastJsonStr, numDays);
+            }catch (JSONException e){
+                Log.e(LOG_TAG, e.getMessage(), e);
+                e.printStackTrace();
+            }
 
-            //return null;
-            return new String[0]; //not sure if this should be "return URL" instead
+            return null;
+            //return new String[0]; //not sure if this should be "return URL" instead
         }//end of doInBackground
+
+        /**Take the string representing the complete forecast in JSON format and
+         * pull out the data we need to construct the Strings needed for the wireframes
+         *
+         * parsing is easy - the constructor takes the JSON string and converts it into
+         * an Object hiearchy for us
+         */
+        private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays)
+            throws JSONException {
+
+            //System.out.println("************** getWeatherDataFromJson has been called");
+
+                //These are the names of the JSON objects that need to be extracted
+            final String OWM_LIST = "list";
+            final String OWM_WEATHER = "weather";
+            final String OWM_TEMPERATURE = "temp";
+            final String OWM_MAX = "max";
+            final String OWM_MIN = "min";
+            final String OWM_DESCRIPTION = "main";
+
+//            System.out.println(OWM_LIST + "\n" + OWM_WEATHER + "\n" + OWM_TEMPERATURE + "\n" + OWM_MAX
+//                    + "\n" + OWM_MIN + "\n" + OWM_DESCRIPTION);
+
+            JSONObject forecastJson = new JSONObject(forecastJsonStr);
+            JSONArray weatherArray = forecastJson.getJSONArray(OWM_LIST);
+
+
+            //OWM returns daily forecasts based upon the local time of the city that is being
+            //asked for, which means that we need to know the GMT offset to translate this data
+            //properly
+
+            //Since this data is also sent in-order and the first day is always the current day
+            //we're going to take advantage of that to get a nice
+            //UTC  date for all our weather
+
+            Time dayTime = new Time();
+            dayTime.setToNow();
+//            System.out.println("Daytime should go here");
+
+            //we start at the day returned by local time, otherwise this won't work well
+            int julanStartDay = Time.getJulianDay(System.currentTimeMillis(),dayTime.gmtoff);
+
+            //now we work exclusively in UTC
+            dayTime = new Time();
+
+            String[] resultStrs = new String[numDays];
+            for (int i = 0; i < weatherArray.length(); i++){
+                // for now, using the format "day, description, hi/low"
+                String day;
+                String description;
+                String highAndLow;
+
+                //get the JSON object representing the day
+                JSONObject dayForecast = weatherArray.getJSONObject(i);
+
+                //the date/time is returned as a long. we need to convert that
+                //into something human-readable
+                long dateTime;
+                //converting to UTC Time
+                dateTime = dayTime.setJulianDay(julanStartDay+i);
+                day = getReadableDateString(dateTime);
+
+                //description is in a child array called "weather" which is one element long
+                JSONObject weatherObject = dayForecast.getJSONArray(OWM_WEATHER).getJSONObject(0);
+                description = weatherObject.getString(OWM_DESCRIPTION);
+
+                //Temperatures are in a child object called "temp"
+                JSONObject temperatureObject = dayForecast.getJSONObject(OWM_TEMPERATURE);
+                double high = temperatureObject.getDouble(OWM_MAX);
+                double low = temperatureObject.getDouble(OWM_MIN);
+
+                highAndLow = formatHighLows(high, low);
+                resultStrs[i] = day + " - " + description + " - " + highAndLow;
+            }
+
+            for (String s : resultStrs){
+                Log.v(LOG_TAG, "Forecast entry: " + s);
+            }
+            System.out.println("****************** resultStrs: " + resultStrs);
+            return resultStrs;
+
+        }//end of getWeatherDataFromJson
+
+        private String getReadableDateString(long time){
+            //convert Unix timestamp to milliseconds to be converted into a date
+            SimpleDateFormat shortenedDataFormat = new SimpleDateFormat("EEE MMM dd");
+            return shortenedDataFormat.format(time);
+        }
+
+        //prepare the weather high/lows for presentation
+        private String formatHighLows (double high, double low){
+            //assume user doesn't care about tenths of a degree
+            long roundedHigh = Math.round(high);
+            long roundedLow = Math.round(low);
+
+            String highLowStr = roundedHigh + "/" + roundedLow;
+            return highLowStr;
+        }
+
+        @Override
+        protected void onPostExecute(String[] result) {
+            if (result != null){
+                mForecastAdapter.clear();
+                for (String dayForcastStr : result) {
+                    mForecastAdapter.add(dayForcastStr);
+                }
+                // new data is back from the server
+            }
+        }
 
 
 
