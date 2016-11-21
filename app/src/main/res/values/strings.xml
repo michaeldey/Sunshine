@@ -4,10 +4,20 @@
     <string name="app_name">Sunshine</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
-    <string name="action_refresh">Refresh</string>
+
+    <!-- Menu label to fetch updated weather info -->
+    <string name="action_refresh" translatable="false">Refresh</string>
     <string name="title_activity_detail">Details</string>
     <string name="title_activity_settings">Settings</string>
+
+    <!-- Label for the location preference [char limit 30]-->
     <string name="pref_location_label">Location</string>
+
+    <!-- Key name for storing location in SharedPreferences [char limit none] -->
+    <string name="pref_location_key" translatable="false">location</string>
+
+    <!-- Default postal code for location preference [char limit none]-->
+    <string name="pref_location_default" translatable="false">84123</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
