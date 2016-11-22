@@ -18,7 +18,8 @@ public class SettingsActivity extends PreferenceActivity
 
         //for all preferences, attach OnPreferenceChangeListener so the
         //UI summary can be upded when the preference changes
-        bindPreferenceSummaryToValue(findPreference("location"));
+        bindPreferenceSummaryToValue(findPreference(getString(R.string.pref_location_key)));
+        bindPreferenceSummaryToValue(findPreference(getString(R.string.pref_units_key)));
 
         //display the fragment as the main content
         getFragmentManager().beginTransaction()

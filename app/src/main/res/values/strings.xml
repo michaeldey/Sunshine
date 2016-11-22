@@ -19,6 +19,24 @@
     <!-- Default postal code for location preference [char limit none]-->
     <string name="pref_location_default" translatable="false">84123</string>
 
+    <!-- Label for temperature units [char limit 30]-->
+    <string name="pref_units_label">Temperature Units</string>
+
+    <!-- Label for metric option [char limit 30]-->
+    <string name="pref_units_label_metric">Metric</string>
+
+    <!-- Label for imperial option [char limit 30]-->
+    <string name="pref_units_label_imperial">Imperial</string>
+
+    <!-- Label for pref units key [char limit 30]-->
+    <string name="pref_units_key" translatable="false">units</string>
+
+    <!-- Label for pref units metric[char limit 30]-->
+    <string name="pref_units_metric" translatable="false">metric</string>
+
+    <!-- Label for pref units metric[char limit 30]-->
+    <string name="pref_units_imperial" translatable="false">imperial</string>
+
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 

@@ -1,6 +1,7 @@
 package com.example.android.sunshine.app;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -329,6 +330,19 @@ public class ForecastFragment extends Fragment {
             dayTime = new Time();
 
             String[] resultStrs = new String[numDays];
+
+            /*
+            Data is fetched in celsius by default
+            if user prefers to see in farenheit, convert values here
+            we do this here rather than fetch in farenheit so the user
+            can change this option without having to re-fetch
+             */
+            SharedPreferences sharedPrefs =
+                    PreferenceManager.getDefaultSharedPreferences(getActivity());
+            String unitType = sharedPrefs.getString(
+                    getString(R.string.pref_units_key),
+                    getString(R.string.pref_units_metric));
+
             for (int i = 0; i < weatherArray.length(); i++){
                 // for now, using the format "day, description, hi/low"
                 String day;
@@ -354,7 +368,7 @@ public class ForecastFragment extends Fragment {
                 double high = temperatureObject.getDouble(OWM_MAX);
                 double low = temperatureObject.getDouble(OWM_MIN);
 
-                highAndLow = formatHighLows(high, low);
+                highAndLow = formatHighLows(high, low, unitType);
                 resultStrs[i] = day + " - " + description + " - " + highAndLow;
             }
 
@@ -373,7 +387,15 @@ public class ForecastFragment extends Fragment {
         }
 
         //prepare the weather high/lows for presentation
-        private String formatHighLows (double high, double low){
+        private String formatHighLows (double high, double low, String unitType){
+
+            if(unitType.equals(getString(R.string.pref_units_imperial))){
+                high = (high * 1.8) + 32;
+                low = (low * 1.8) + 32;
+            }else if (!unitType.equals(getString(R.string.pref_units_metric))){
+                Log.d(LOG_TAG, "Unit type not found: " + unitType);
+            }
+
             //assume user doesn't care about tenths of a degree
             long roundedHigh = Math.round(high);
             long roundedLow = Math.round(low);
